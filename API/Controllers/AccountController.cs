@@ -25,7 +25,7 @@ namespace API.Controllers
             
             if(await UserExists(registerDto.Username)) return BadRequest("Username already exists");
 
-            using var hmac = new HMACSHA512();
+            using var hmac = new HMACSHA512();      //first time when a new HMAc bla bla is called, a new random key is set and is been assigned to password Salt
             var user = new AppUser {
                 UserName = registerDto.Username.ToLower(),
                 passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(registerDto.Password)),
@@ -34,6 +34,25 @@ namespace API.Controllers
 
             _context.Users.Add(user);           //Begins tracking the given entity that are not already being tracked
             await _context.SaveChangesAsync();  //Add the tracked data into the database
+
+            return user;
+
+        }
+
+        [HttpPost("login")]
+        public async Task<ActionResult<AppUser>> Login(LoginDto loginDto) {
+
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.UserName == loginDto.Username.ToLower());
+
+            if(user == null) return Unauthorized("Invalid user");
+
+            using var hmac = new HMACSHA512(user.passwordSalt);     // Random key is set during registration but during login we can use already stored key of that particular user
+                                                                    //This time we need to calculate the computed hash of their password using the password salt so we have something to compare it against
+            var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
+
+            for(int i = 0; i< computedHash.Length; i++) {
+                if(computedHash[i] != user.passwordHash[i]) return Unauthorized("Invalid Password");
+            }
 
             return user;
 

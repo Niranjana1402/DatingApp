@@ -22,5 +22,7 @@ export class AppComponent implements OnInit {
       next: response => this.users = response,
       error: error => console.log(error)
     })
+    console.log(this.users);
+    //this.users.forEach()
   }
 }
